@@ -1,0 +1,15 @@
+{
+  "name": "ez-vite",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/ez-vite.esm.js",
+  "types": "src/index.ts",
+  "dependencies": {
+    "ez": "workspace:*",
+    "vite": "^5.0.8",
+    "@types/babel__core": "^7.20.5",
+    "@babel/core": "^7.23.5",
+    "@babel/plugin-transform-react-jsx-self": "^7.23.3",
+    "@babel/plugin-transform-react-jsx-source": "^7.23.3"
+  }
+}

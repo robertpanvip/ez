@@ -1,0 +1,10 @@
+{
+  "name": "@ez/jsx-dev-runtime",
+  "version": "1.0.0",
+  "types": "index.ts",
+  "main": "src",
+  "license": "MIT",
+  "dependencies": {
+    "ez": "workspace:*"
+  }
+}

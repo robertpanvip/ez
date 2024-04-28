@@ -1,0 +1,9 @@
+{
+  "name": "ez-dom",
+  "version": "1.0.0",
+  "main": "src",
+  "types": "src/index.ts",
+  "dependencies": {
+    "ez": "workspace:*"
+  }
+}

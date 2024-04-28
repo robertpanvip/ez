@@ -1,0 +1,9 @@
+{
+  "name": "ez",
+  "version": "1.0.0",
+  "types": "src/index.ts",
+  "main": "src",
+  "dependencies": {
+    "ez": "workspace:*"
+  }
+}
