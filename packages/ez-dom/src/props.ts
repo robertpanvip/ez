@@ -1,4 +1,5 @@
 import {IS_NON_DIMENSIONAL} from 'ez'
+import {isValidSignal} from "ez/src/create-element.ts";
 
 let eventClock = 0;
 
@@ -23,7 +24,7 @@ function setStyle(style: any, key: string, value: any) {
  * @param {boolean} isSvg Whether or not this DOM node is an SVG node or not
  */
 export function setProperty(dom: any, name: string, value: any, oldValue: any, isSvg: boolean) {
-    if (typeof value === 'object' && value.$isSignal) {
+    if (isValidSignal(value)) {
         value.subscribe?.((val: any) => {
             setProperty(dom, name, val, undefined, false)
         });

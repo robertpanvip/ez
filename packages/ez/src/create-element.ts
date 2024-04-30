@@ -1,5 +1,5 @@
-import {getPositionKey, slice} from './util';
-import {JSX as JSXInternal} from "ez";
+import {getStackKey, slice} from './util';
+import {JSX as JSXInternal, SignalLike} from "ez";
 import type {ClassAttributes, ComponentChildren, RefObject, RenderableProps, VNode} from "./index.ts";
 import {CONTEXT} from "./share.ts";
 
@@ -111,7 +111,7 @@ export function createVNode(
         _index: -1,
         _flags: 0
     }
-    vNode.key = key || getPositionKey();
+    vNode.key = key || getStackKey();
     // V8 seems to be better at detecting type shapes if the object is allocated from the same call site
     // Do not inline into createElement and coerceToVNode!
     return vNode;
@@ -127,4 +127,11 @@ export function Fragment<P = NonNullable<unknown>>(props: RenderableProps<P>) {
 
 export function isValidElement(vnode: any): vnode is VNode {
     return vnode != null && vnode.constructor == undefined;
+}
+
+export function isValidSignal(vnode: any): vnode is SignalLike<any> {
+    if (typeof vnode === 'object' && vnode !== null) {
+        return typeof vnode.subscribe === 'function' && 'value' in vnode
+    }
+    return false
 }

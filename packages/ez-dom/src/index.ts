@@ -1,8 +1,17 @@
-import {ComponentChild, isValidElement} from "ez";
+import {
+    ComponentChild,
+    ComponentChildren,
+    getCurrentInstance,
+    isValidElement,
+    isValidSignal,
+    SignalLike,
+    VNode
+} from "ez";
 import {setProperty} from "./props";
 import {setCurrentInstance} from "ez";
 import {assignRef} from "./util";
-import target, {BusEvent} from "./bus.ts";
+
+const vm = new WeakMap<VNode, Record<string, any>>()
 
 interface ContainerNode {
     readonly nodeType: number;
@@ -17,51 +26,93 @@ interface ContainerNode {
     removeChild(child: ContainerNode): ContainerNode;
 }
 
-const updateChildren = (item: any, ele: Element) => {
-    if (typeof item === 'object' && item.$isSignal) {
-        let mounted = false;
-        let cache: ChildNode[];
-        let cacheVNode: ComponentChild = null;
-        item.subscribe?.((val: ComponentChild) => {
-            if (cacheVNode && isValidElement(val) && isValidElement(cacheVNode) && val.key === cacheVNode.key) {
-                return
-            }
-            const doc = render(val);
-            const childNodes = Array.from(doc.childNodes);
+function renderSignal(signal: SignalLike<any>, ele: ContainerNode) {
+    let mounted = false;
+    let cache: ChildNode[];
+    let cacheVal: ComponentChildren = null;
+    signal.subscribe((val: ComponentChildren) => {
+        console.log(val);
 
-            if (mounted) {
-                if (isValidElement(cacheVNode)) {
-                    //卸载
+        if (cacheVal
+            && isValidElement(val)
+            && isValidElement(cacheVal)
+            && val.key === cacheVal.key
+            && val.type === cacheVal.type
+        ) {
+            return
+        }
+        let doc: DocumentFragment;
+        if (Array.isArray(val)) {
+            doc = document.createDocumentFragment();
+            val.forEach((item) => {
+                updateChildren(item, doc);
+            });
+        } else {
+            doc = render(val);
+        }
+
+        let childNodes = Array.from(doc.childNodes);
+        if (childNodes.length === 0) {
+            const comment = document.createComment('ez');
+            doc.appendChild(comment)
+            childNodes = [comment]
+        }
+
+        if (mounted) {
+            if (isValidElement(cacheVal)) {
+                //卸载
+                const instance = vm.get(cacheVal);
+                if (instance) {
+                    instance.listeners.unmount.forEach((item: () => void) => item())
                 }
-                childNodes.forEach((item, index) => {
-                    if (cache[index]) {
-                        cache[index].replaceWith(item);
-                    } else {
-                        cache[cache.length - 1].after(item)
-                    }
-                });
-                cache.forEach((item, index) => {
-                    if (index > childNodes.length - 1) {
-                        item.remove();
-                    }
-                });
-                cache = childNodes;
-            } else {
-                cache = childNodes;
-                docAppendToNode(doc, ele);
             }
-            mounted = true;
-            cacheVNode = val;
-        });
+            let firstNode: ChildNode = cache[cache.length - 1];
+            childNodes.forEach((item, index) => {
+                if (cache[index]) {
+                    cache[index].replaceWith(item);
+                    firstNode = item;
+                } else {
+                    if (cache.length !== 0) {
+                        firstNode.after(item);
+                    }
+                }
+            });
+            cache.forEach((item, index) => {
+                if (index > childNodes.length - 1) {
+                    item.remove();
+                }
+            });
+            cache = childNodes;
+        } else {
+            cache = childNodes;
+            docAppendToNode(doc, ele);
+            if (isValidElement(val)) {
+                requestAnimationFrame(() => {
+                    const instance = vm.get(val);
+                    if (instance) {
+                        instance.listeners.mounted.forEach((item: () => void) => item())
+                    }
+                })
+            }
+        }
+        mounted = true;
+        cacheVal = val;
+    });
+}
+
+const updateChildren = (item: ComponentChild, ele: ContainerNode) => {
+    if (isValidSignal(item)) {
+        renderSignal(item, ele)
     } else {
         const doc = render(item);
         docAppendToNode(doc, ele)
     }
 }
 
-function render(vNode: ComponentChild): DocumentFragment {
+function render(vNode: ComponentChildren): DocumentFragment {
     let dom: Element | Text | null = null;
     const doc = document.createDocumentFragment();
+    console.log(vNode);
     if (isValidElement(vNode)) {
         if (typeof vNode.type === 'string') {
             dom = document.createElement(vNode.type);
@@ -79,11 +130,26 @@ function render(vNode: ComponentChild): DocumentFragment {
             doc?.appendChild(dom);
             vNode.ref && assignRef(vNode.ref, dom);
         } else {
-            setCurrentInstance({
-                refs: new WeakMap()
+            const currentInstance = getCurrentInstance();
+            const instance = {
+                refs: new WeakMap(),
+                props: vNode.props,
+                vNode,
+                listeners: {
+                    mounted: [],
+                    unmount: []
+                }
+            }
+            vm.set(vNode, instance)
+            setCurrentInstance(instance)
+            const proxy = new Proxy(vNode.props, {
+                get(target, key) {
+                    return Reflect.get(target, key)
+                },
             })
-            const _vNode = vNode.type(vNode.props);
-            setCurrentInstance(null)
+            const _vNode = vNode.type(proxy);
+
+            setCurrentInstance(currentInstance)
             const vNodes = Array.isArray(_vNode) ? _vNode : [_vNode]
             vNodes.forEach(item => {
                 const fr = render(item);
@@ -91,6 +157,8 @@ function render(vNode: ComponentChild): DocumentFragment {
             });
 
         }
+    } else if (isValidSignal(vNode)) {
+        renderSignal(vNode, doc)
     } else if (vNode !== false) {
         dom = document.createTextNode(`${vNode != 0 ? vNode || "" : 0}`);
         doc?.appendChild(dom)
@@ -107,9 +175,10 @@ function docAppendToNode(doc: DocumentFragment, node: ContainerNode) {
 export function createRoot(parent: ContainerNode) {
     return {
         render: (vNode: ComponentChild) => {
+            setCurrentInstance({})
             const doc = render(vNode);
             docAppendToNode(doc, parent);
-            target.dispatchEvent(new BusEvent('mounted'))
+            setCurrentInstance(null)
         }
     }
 }

@@ -8,8 +8,16 @@ export function createSignal<T>(fn: () => T) {
             update(value)
         });
     }
-    return {
-        $isSignal: true,
-        subscribe
-    } as JSXInternal.SignalLike<T>
+    const signal: JSXInternal.SignalLike<T> = {
+        $$signal:"Signal",
+        subscribe,
+        valueOf() {
+            return this.value;
+        },
+        get value() {
+            const value = fn();
+            return value as T
+        }
+    }
+    return signal
 }

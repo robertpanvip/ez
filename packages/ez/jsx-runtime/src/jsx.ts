@@ -37,7 +37,10 @@ export namespace JSXInternal {
             : never;
     }[keyof IntrinsicElements]
         | ComponentType<P>;
-    export interface Element extends VNode<any> {}
+
+    export interface Element extends VNode<any> {
+    }
+
     export type ElementClass = FunctionComponent<any>;
 
     export interface ElementAttributesProperty {
@@ -61,15 +64,20 @@ export namespace JSXInternal {
     export type AllCSSProperties = {
         [key: string]: string | number | null | undefined;
     };
+
     export interface CSSProperties extends AllCSSProperties, DOMCSSProperties {
         cssText?: string | null;
     }
 
     export interface SignalLike<T> {
-        //value: T;
+        $$signal?: string;
+
+        value: T;
+
+        valueOf(): T
+
         //peek(): T;
-        $isSignal:boolean,
-        subscribe(fn: (value: T) => void): () => void;
+        subscribe(fn: (value: T) => void): void;
     }
 
     export type Signalish<T> = T | SignalLike<T>;
@@ -2598,7 +2606,8 @@ export namespace JSXInternal {
         notation?: string | undefined | SignalLike<string | undefined>;
     }
 
-    export interface HTMLMErrorElement extends MathMLElement {}
+    export interface HTMLMErrorElement extends MathMLElement {
+    }
 
     export interface HTMLMFencedElement extends MathMLElement {
         close?: string | undefined | SignalLike<string | undefined>;
@@ -2677,7 +2686,8 @@ export namespace JSXInternal {
         superscriptshift?: string | undefined | SignalLike<string | undefined>;
     }
 
-    export interface HTMLMNElement extends MathMLElement {}
+    export interface HTMLMNElement extends MathMLElement {
+    }
 
     export interface HTMLMOElement extends MathMLElement {
         /** Non-standard attribute See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mo#accent */
@@ -2706,13 +2716,17 @@ export namespace JSXInternal {
         width?: string | undefined | SignalLike<string | undefined>;
     }
 
-    export interface HTMLMPhantomElement extends MathMLElement {}
+    export interface HTMLMPhantomElement extends MathMLElement {
+    }
 
-    export interface HTMLMPrescriptsElement extends MathMLElement {}
+    export interface HTMLMPrescriptsElement extends MathMLElement {
+    }
 
-    export interface HTMLMRootElement extends MathMLElement {}
+    export interface HTMLMRootElement extends MathMLElement {
+    }
 
-    export interface HTMLMRowElement extends MathMLElement {}
+    export interface HTMLMRowElement extends MathMLElement {
+    }
 
     export interface HTMLMSElement extends MathMLElement {
         /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/ms#browser_compatibility */
@@ -2727,7 +2741,8 @@ export namespace JSXInternal {
         width?: string | undefined | SignalLike<string | undefined>;
     }
 
-    export interface HTMLMSqrtElement extends MathMLElement {}
+    export interface HTMLMSqrtElement extends MathMLElement {
+    }
 
     export interface HTMLMStyleElement extends MathMLElement {
         /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mstyle#background */
@@ -2847,7 +2862,8 @@ export namespace JSXInternal {
         >;
     }
 
-    export interface HTMLMTextElement extends MathMLElement {}
+    export interface HTMLMTextElement extends MathMLElement {
+    }
 
     export interface HTMLMTrElement extends MathMLElement {
         /** Non-standard attribute See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mtr#columnalign */
@@ -2879,7 +2895,8 @@ export namespace JSXInternal {
         accentunder?: boolean | undefined | SignalLike<boolean | undefined>;
     }
 
-    export interface HTMLSemanticsElement extends MathMLElement {}
+    export interface HTMLSemanticsElement extends MathMLElement {
+    }
 
     export interface IntrinsicElements {
         // HTML

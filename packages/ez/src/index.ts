@@ -36,7 +36,7 @@ export type Ref<T> = RefObject<T> | RefCallback<T> | null;
 
 export type ComponentChild =
     | VNode<any>
-    | object
+    | SignalLike<any>
     | string
     | number
     | bigint
@@ -94,24 +94,36 @@ export {
 } from './const';
 export {
     getCurrentInstance,
-    setCurrentInstance
+    setCurrentInstance,
+    busTarget,
 } from './share';
 export {
-    getPositionKey,
+    BusEventTarget,
+    BusEvent,
+} from './bus';
+export {
+    getStackKey,
 } from './util';
-export type {
+
+import type {JSX} from "ez/jsx-runtime"
+
+export {
     JSX,
-    JSX as Ez
-} from 'ez/jsx-runtime';
+    JSX as Ez,
+};
+export type SignalLike<T> = JSX.SignalLike<T>
 
 export {
     createElement,
     Fragment,
     createRef,
-    isValidElement
+    isValidElement,
+    isValidSignal,
 } from './create-element';
 export {
     useState,
+    useMounted,
+    useUnMounted,
     useRef,
     effect,
 } from './hooks';

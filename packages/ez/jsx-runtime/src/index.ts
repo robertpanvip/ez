@@ -1,6 +1,6 @@
 import type {VNode, Attributes, ComponentType, ComponentChildren, ComponentChild} from "ez";
 import type {JSXInternal} from "./jsx.ts";
-import {Fragment, getPositionKey} from 'ez';
+import {Fragment, getStackKey} from 'ez';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
@@ -50,7 +50,7 @@ function createVNode(type: VNode["type"], props: any, key: VNode['key'], isStati
                 normalizedProps[i] = ref[i];
             }
     }
-    vNode.key = key || getPositionKey();
+    vNode.key = key || getStackKey();
     return vNode;
 }
 
@@ -60,13 +60,13 @@ export function jsxDEV(
     type: string,
     props: JSXInternal.HTMLAttributes &
         JSXInternal.SVGAttributes &
-        Record<string, any> & { children?: ComponentChildren },
+        Record<string, any> & { children?: ComponentChildren, a:number },
     key?: string
 ): VNode<any>;
 
 export function jsxDEV<P>(
     type: ComponentType<P>,
-    props: Attributes & P & { children?: ComponentChildren },
+    props: Attributes & P & { children?: ComponentChildren, a:number },
     key?: string
 ): VNode<any>;
 

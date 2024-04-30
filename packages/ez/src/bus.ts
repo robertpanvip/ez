@@ -4,7 +4,7 @@ export class BusEvent<T> extends CustomEvent<T> {
     }
 }
 
-class BusEventTarget extends EventTarget {
+export class BusEventTarget extends EventTarget {
     constructor() {
         super();
     }

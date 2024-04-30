@@ -16,7 +16,7 @@ export function useState<S>(initialState: S | (() => S)): readonly [(() => S), (
     let val: S = invokeOrReturn(undefined, initialState);
 
     const getter = () => {
-
+        //收集依赖
         if (currentEffect && context) {
             const effects = vm.get(context);
             if (!effects) {
@@ -46,22 +46,34 @@ export function useRef<T>(): RefObject<T> {
     return {current: null};
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function useMounted<T>(fn: () => T) {
-    console.log(fn)
-    /*const onMounted=()=>{
-        const unMounted = fn();
-    }
-    const onUnMounted=()=>{
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function useMounted(fn: () => (() => void) | void) {
+    const context = getCurrentInstance();
+    if (context) {
+        context.listeners.mounted.push(() => {
+            const onMounted = fn();
+            if (onMounted && typeof onMounted === 'function') {
+                context.listeners.unmount.push(onMounted)
+            }
+        })
     }
-    target.addEventListener('mounted',onMounted);
-    target.addEventListener('unMounted',onUnMounted);*/
 }
 
+export function useUnMounted(fn: () => void) {
+    const context = getCurrentInstance();
+    if (context) {
+        context.listeners.unmount.push(() => {
+            fn();
+        })
+    }
+}
+
+
 export function effect<T>(fn: () => T) {
+    const temp = currentEffect;
     currentEffect = () => fn();
     const res = currentEffect!();
-    currentEffect = null;
+    currentEffect = temp;
     return res;
 }
