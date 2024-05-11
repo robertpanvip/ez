@@ -21,3 +21,31 @@ export function getStackKey() {
         return genHash(`${genHash(stackKey)}`);
     }
 }
+
+function generateRandomString(length: number): string {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+}
+
+function generateUniqueRandomString(existingStrings: Set<string>): string {
+    let randomString = generateRandomString(6);
+    while (existingStrings.has(randomString)) {
+        randomString = generateRandomString(6);
+    }
+    return randomString;
+}
+
+// ：生成一个不重复的 6 位随机字符串
+export function generateKey(): string {
+    const existingStrings = new Set<string>();
+    let randomString = '';
+    while (existingStrings.size < 1) {
+        randomString = generateUniqueRandomString(existingStrings);
+        existingStrings.add(randomString);
+    }
+    return randomString;
+}

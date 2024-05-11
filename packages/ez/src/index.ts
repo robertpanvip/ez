@@ -103,6 +103,7 @@ export {
 } from './bus';
 export {
     getStackKey,
+    generateKey,
 } from './util';
 
 import type {JSX} from "ez/jsx-runtime"

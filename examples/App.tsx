@@ -45,7 +45,7 @@ function App() {
             }*/}
             {
                 $list().map(item=>{
-                    return <div>{item}</div>
+                    return <div key={item}>{item}</div>
                 })
             }
             <div ref={ref}>
@@ -63,7 +63,7 @@ function App() {
                 </p>
                 <button
                     onClick={() => {
-                        setList([1,2,3]);
+                        setList([1,3,2]);
                     }}
                 >
                     改变Array

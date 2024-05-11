@@ -4,12 +4,13 @@ import {
     getCurrentInstance,
     isValidElement,
     isValidSignal,
+    setCurrentInstance,
     SignalLike,
     VNode
 } from "ez";
 import {setProperty} from "./props";
-import {setCurrentInstance} from "ez";
 import {assignRef} from "./util";
+import FragmentNode from "./FragmentNode.ts";
 
 const vm = new WeakMap<VNode, Record<string, any>>()
 
@@ -26,72 +27,118 @@ interface ContainerNode {
     removeChild(child: ContainerNode): ContainerNode;
 }
 
+function diffVNode(val: ComponentChild, previous: ComponentChild) {
+    if (isValidElement(val) && isValidElement(previous)) {
+        let key = val.key;
+        let previousKey = previous.key
+        if (isValidSignal(key)) {
+            key = key.value;
+        }
+        if (isValidSignal(previousKey)) {
+            previousKey = previousKey.value;
+        }
+        return key === previousKey;
+    } else {
+        return val === previous
+    }
+}
+
+type CommentNode = Comment & { effect: ChildNode[], cc: ComponentChild };
+
+function executeLifecycle(val: ComponentChild, method: string) {
+    if (isValidElement(val)) {
+        const instance = vm.get(val);
+        if (instance) {
+            instance.listeners[method].forEach((item: () => void) => item())
+        }
+    }
+}
+
 function renderSignal(signal: SignalLike<any>, ele: ContainerNode) {
     let mounted = false;
-    let cache: ChildNode[];
+    let cache: FragmentNode[];
     let cacheVal: ComponentChildren = null;
     signal.subscribe((val: ComponentChildren) => {
-        console.log(val);
-
         if (cacheVal
             && isValidElement(val)
             && isValidElement(cacheVal)
-            && val.key === cacheVal.key
-            && val.type === cacheVal.type
         ) {
-            return
+            if (diffVNode(val, cacheVal)) {
+                return
+            }
         }
         let doc: DocumentFragment;
-        if (Array.isArray(val)) {
+        const isArray = Array.isArray(val)
+        if (isArray) {
             doc = document.createDocumentFragment();
-            val.forEach((item) => {
-                updateChildren(item, doc);
-            });
+            const loop = (val: Array<ComponentChildren>) => {
+                val.forEach((item) => {
+                    if (Array.isArray(item)) {
+                        loop(item)
+                    } else {
+                        const start = document.createComment('ez');
+                        const dom = render(item);
+                        (start as CommentNode).effect = Array.from(dom.childNodes);
+                        (start as CommentNode).cc = item;
+                        doc.appendChild(start);
+                        docAppendToNode(dom, doc);
+                    }
+                });
+            }
+            loop(val as Array<ComponentChildren>)
         } else {
             doc = render(val);
         }
-
-        let childNodes = Array.from(doc.childNodes);
-        if (childNodes.length === 0) {
-            const comment = document.createComment('ez');
-            doc.appendChild(comment)
-            childNodes = [comment]
+        if (Array.from(doc.childNodes).length === 0) {
+            val = [];
+        }
+        const fNodes = FragmentNode.geChildFragmentNodes(doc)
+        if (!isArray) {
+            console.log('VChildNodes', fNodes, cache);
         }
 
         if (mounted) {
             if (isValidElement(cacheVal)) {
                 //卸载
-                const instance = vm.get(cacheVal);
-                if (instance) {
-                    instance.listeners.unmount.forEach((item: () => void) => item())
-                }
+                executeLifecycle(cacheVal, 'unmount')
             }
-            let firstNode: ChildNode = cache[cache.length - 1];
-            childNodes.forEach((item, index) => {
+
+            let firstNode: FragmentNode = cache[cache.length - 1];
+            fNodes.forEach((item, index) => {
                 if (cache[index]) {
-                    cache[index].replaceWith(item);
-                    firstNode = item;
+
+                    if (cache[index].cc === null || item.cc === null || !diffVNode(cache[index].cc, item.cc)) {
+                        //卸载
+                        executeLifecycle(cache[index].cc, 'unmounted')
+                        console.log(item, cache[index], cache[index].cc, item.cc);
+                        cache[index].replaceWith(item);
+                        //卸载
+                        executeLifecycle(item.cc, 'mounted')
+                        firstNode = item;
+                    }
                 } else {
                     if (cache.length !== 0) {
                         firstNode.after(item);
+                        //挂载
+                        executeLifecycle(item.cc, 'mounted')
                     }
                 }
             });
             cache.forEach((item, index) => {
-                if (index > childNodes.length - 1) {
+                if (index > fNodes.length - 1) {
+                    //卸载
+                    executeLifecycle(item.cc, 'unmounted')
                     item.remove();
                 }
             });
-            cache = childNodes;
+            cache = fNodes;
         } else {
-            cache = childNodes;
+            cache = fNodes;
             docAppendToNode(doc, ele);
             if (isValidElement(val)) {
                 requestAnimationFrame(() => {
-                    const instance = vm.get(val);
-                    if (instance) {
-                        instance.listeners.mounted.forEach((item: () => void) => item())
-                    }
+                    //挂载
+                    executeLifecycle(val, 'mounted')
                 })
             }
         }
@@ -100,19 +147,9 @@ function renderSignal(signal: SignalLike<any>, ele: ContainerNode) {
     });
 }
 
-const updateChildren = (item: ComponentChild, ele: ContainerNode) => {
-    if (isValidSignal(item)) {
-        renderSignal(item, ele)
-    } else {
-        const doc = render(item);
-        docAppendToNode(doc, ele)
-    }
-}
-
-function render(vNode: ComponentChildren): DocumentFragment {
+export function render(vNode: ComponentChildren): DocumentFragment {
     let dom: Element | Text | null = null;
     const doc = document.createDocumentFragment();
-    console.log(vNode);
     if (isValidElement(vNode)) {
         if (typeof vNode.type === 'string') {
             dom = document.createElement(vNode.type);
@@ -120,15 +157,10 @@ function render(vNode: ComponentChildren): DocumentFragment {
             Object.entries(props).forEach(([prop, value]) => {
                 setProperty(dom, prop, value, undefined, false)
             })
-            if (Array.isArray(children)) {
-                children.forEach((item) => {
-                    updateChildren(item, dom as Element);
-                });
-            } else {
-                updateChildren(children, dom as Element)
-            }
-            doc?.appendChild(dom);
+            doc.appendChild(dom);
             vNode.ref && assignRef(vNode.ref, dom);
+            const _dom = render(children)
+            docAppendToNode(_dom, dom)
         } else {
             const currentInstance = getCurrentInstance();
             const instance = {
@@ -159,16 +191,25 @@ function render(vNode: ComponentChildren): DocumentFragment {
         }
     } else if (isValidSignal(vNode)) {
         renderSignal(vNode, doc)
+    } else if (Array.isArray(vNode)) {
+        (vNode as ComponentChildren[]).forEach(item => {
+            const dom = render(item);
+            docAppendToNode(dom, doc)
+        })
     } else if (vNode !== false) {
         dom = document.createTextNode(`${vNode != 0 ? vNode || "" : 0}`);
-        doc?.appendChild(dom)
+        doc.appendChild(dom)
+    } else if (!vNode) {
+        const start = document.createComment('ez-empty');
+        (start as CommentNode).effect = [];
+        doc.appendChild(start)
     }
     return doc;
 }
 
-function docAppendToNode(doc: DocumentFragment, node: ContainerNode) {
+function docAppendToNode(doc: DocumentFragment, container: ContainerNode) {
     Array.from(doc.childNodes).forEach(item => {
-        node.appendChild(item)
+        container.appendChild(item)
     })
 }
 

@@ -14,7 +14,6 @@ let currentEffect: (Effect<any>) | null = null;
 export function useState<S>(initialState: S | (() => S)): readonly [(() => S), ((value: StateUpdater<S>) => void)] {
     const context = getCurrentInstance();
     let val: S = invokeOrReturn(undefined, initialState);
-
     const getter = () => {
         //收集依赖
         if (currentEffect && context) {
@@ -25,7 +24,6 @@ export function useState<S>(initialState: S | (() => S)): readonly [(() => S), (
                 vm.set(context, [...effects, currentEffect])
             }
         }
-
         return val
     }
     const setter = (value: StateUpdater<S>) => {

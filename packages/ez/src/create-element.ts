@@ -1,4 +1,4 @@
-import {getStackKey, slice} from './util';
+import {generateKey, slice} from './util';
 import {JSX as JSXInternal, SignalLike} from "ez";
 import type {ClassAttributes, ComponentChildren, RefObject, RenderableProps, VNode} from "./index.ts";
 import {CONTEXT} from "./share.ts";
@@ -111,7 +111,7 @@ export function createVNode(
         _index: -1,
         _flags: 0
     }
-    vNode.key = key || getStackKey();
+    vNode.key = key || generateKey();
     // V8 seems to be better at detecting type shapes if the object is allocated from the same call site
     // Do not inline into createElement and coerceToVNode!
     return vNode;
